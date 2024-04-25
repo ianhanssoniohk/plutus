@@ -1,17 +1,37 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE LambdaCase         #-}
+
 {-# LANGUAGE NoImplicitPrelude  #-}
-{-# LANGUAGE TupleSections      #-}
+
 {-# LANGUAGE ViewPatterns       #-}
 
-module PlutusTx.DataMap where
+module PlutusTx.DataMap (
+  Map,
+  lookup,
+  member,
+  insert,
+  delete,
+  singleton,
+  empty,
+  null,
+  toList,
+  toBuiltinList,
+  unsafeFromList,
+  unsafeFromBuiltinList,
+  uncons,
+  unsafeUncons,
+  noDuplicateKeys,
+  all,
+  any,
+  union,
+  unionWith,
+  ) where
 
 import PlutusTx.Builtins qualified as P
 import PlutusTx.Builtins.Internal qualified as BI
 import PlutusTx.IsData qualified as P
-import PlutusTx.Prelude hiding (null, toList)
+import PlutusTx.Prelude hiding (all, any, null, toList, uncons)
 import PlutusTx.These
 
 import Prelude qualified as Haskell
