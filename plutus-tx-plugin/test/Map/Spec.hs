@@ -13,11 +13,14 @@
 
 module Map.Spec where
 
+-- TODO: name module to Data.AssocList.Spec? Or keep as is and add tests for AssocMap as well
+
 import Test.Tasty.Extras
 
 import PlutusTx.Builtins qualified as PlutusTx
 import PlutusTx.Code
-import PlutusTx.DataMap qualified as Map
+import PlutusTx.Data.AssocList (AssocList)
+import PlutusTx.Data.AssocList qualified as AssocList
 import PlutusTx.Lift (liftCodeDef)
 import PlutusTx.Prelude qualified as PlutusTx
 import PlutusTx.Show qualified as PlutusTx
@@ -52,18 +55,18 @@ map1 =
   $$( compile
         [||
         \n ->
-          let m :: Map.Map Integer PlutusTx.BuiltinByteString
+          let m :: AssocList Integer PlutusTx.BuiltinByteString
               m =
                 foldr
-                  (\i -> Map.insert (n PlutusTx.+ i) (PlutusTx.encodeUtf8 (PlutusTx.show i)))
-                  (Map.singleton n "0")
+                  (\i -> AssocList.insert (n PlutusTx.+ i) (PlutusTx.encodeUtf8 (PlutusTx.show i)))
+                  (AssocList.singleton n "0")
                   (PlutusTx.enumFromTo 1 10)
-              m' = Map.delete (n PlutusTx.+ 5) m
-           in ( Map.lookup n m
-              , Map.lookup (n PlutusTx.+ 5) m
-              , Map.lookup (n PlutusTx.+ 10) m
-              , Map.lookup (n PlutusTx.+ 20) m
-              , Map.lookup (n PlutusTx.+ 5) m'
+              m' = AssocList.delete (n PlutusTx.+ 5) m
+           in ( AssocList.lookup n m
+              , AssocList.lookup (n PlutusTx.+ 5) m
+              , AssocList.lookup (n PlutusTx.+ 10) m
+              , AssocList.lookup (n PlutusTx.+ 20) m
+              , AssocList.lookup (n PlutusTx.+ 5) m'
               )
         ||]
     )
@@ -74,7 +77,7 @@ map2 =
         [||
         \n ->
           let m1 =
-                Map.unsafeFromList
+                AssocList.unsafeFromList
                   [ (n PlutusTx.+ 1, "one")
                   , (n PlutusTx.+ 2, "two")
                   , (n PlutusTx.+ 3, "three")
@@ -82,13 +85,13 @@ map2 =
                   , (n PlutusTx.+ 5, "five")
                   ]
               m2 =
-                Map.unsafeFromList
+                AssocList.unsafeFromList
                   [ (n PlutusTx.+ 3, "THREE")
                   , (n PlutusTx.+ 4, "FOUR")
                   , (n PlutusTx.+ 6, "SIX")
                   , (n PlutusTx.+ 7, "SEVEN")
                   ]
-              m = Map.unionWith PlutusTx.appendByteString m1 m2
-           in PlutusTx.fmap (\(k, v) -> (k, PlutusTx.decodeUtf8 v)) (Map.toList m)
+              m = AssocList.unionWith PlutusTx.appendByteString m1 m2
+           in PlutusTx.fmap (\(k, v) -> (k, PlutusTx.decodeUtf8 v)) (AssocList.toList m)
         ||]
     )

@@ -1,13 +1,10 @@
-
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
-
 {-# LANGUAGE NoImplicitPrelude  #-}
-
 {-# LANGUAGE ViewPatterns       #-}
 
-module PlutusTx.DataMap (
-  Map,
+module PlutusTx.Data.AssocList (
+  AssocList,
   lookup,
   member,
   insert,
@@ -36,6 +33,7 @@ import PlutusTx.These
 
 import Prelude qualified as Haskell
 
+-- TODO: fix docs
 {- | An associative map implementation backed by `P.BuiltinData`.
 
 This map implementation has the following characteristics:
@@ -50,22 +48,22 @@ if it is part of a data type defined using @asData@, and the key and value types
 have efficient `P.toBuiltinData` and `P.unsafeFromBuiltinData` operations (e.g., they
 are primitive types or types defined using @asData@).
 -}
-newtype Map k a = Map P.BuiltinData
+newtype AssocList k a = AssocList P.BuiltinData
   deriving stock (Haskell.Eq, Haskell.Show)
   deriving newtype (Eq)
 
-instance P.ToData (Map k a) where
+instance P.ToData (AssocList k a) where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (Map d) = d
+  toBuiltinData (AssocList d) = d
 
-instance P.FromData (Map k a) where
-  fromBuiltinData = Just . Map
+instance P.FromData (AssocList k a) where
+  fromBuiltinData = Just . AssocList
 
-instance P.UnsafeFromData (Map k a) where
-  unsafeFromBuiltinData = Map
+instance P.UnsafeFromData (AssocList k a) where
+  unsafeFromBuiltinData = AssocList
 
 {-# INLINEABLE lookup #-}
-lookup :: forall k a. (P.ToData k, P.UnsafeFromData a) => k -> Map k a -> Maybe a
+lookup :: forall k a. (P.ToData k, P.UnsafeFromData a) => k -> AssocList k a -> Maybe a
 lookup (P.toBuiltinData -> k) m = case lookup' k (toBuiltinList m) of
   Just a  -> Just (P.unsafeFromBuiltinData a)
   Nothing -> Nothing
@@ -89,7 +87,7 @@ lookup' k = go
         )
 
 {-# INLINEABLE member #-}
-member :: forall k a. (P.ToData k) => k -> Map k a -> Bool
+member :: forall k a. (P.ToData k) => k -> AssocList k a -> Bool
 member (P.toBuiltinData -> k) m = member' k (toBuiltinList m)
 
 {-# INLINEABLE member' #-}
@@ -109,7 +107,7 @@ member' k = go
         )
 
 {-# INLINEABLE insert #-}
-insert :: forall k a. (P.ToData k, P.ToData a) => k -> a -> Map k a -> Map k a
+insert :: forall k a. (P.ToData k, P.ToData a) => k -> a -> AssocList k a -> AssocList k a
 insert (P.toBuiltinData -> k) (P.toBuiltinData -> a) m =
   unsafeFromBuiltinList (go (toBuiltinList m))
   where
@@ -128,7 +126,7 @@ insert (P.toBuiltinData -> k) (P.toBuiltinData -> a) m =
         )
 
 {-# INLINEABLE delete #-}
-delete :: forall k a. (P.ToData k) => k -> Map k a -> Map k a
+delete :: forall k a. (P.ToData k) => k -> AssocList k a -> AssocList k a
 delete (P.toBuiltinData -> k) m = unsafeFromBuiltinList (go (toBuiltinList m))
   where
     go ::
@@ -146,21 +144,21 @@ delete (P.toBuiltinData -> k) m = unsafeFromBuiltinList (go (toBuiltinList m))
         )
 
 {-# INLINEABLE singleton #-}
-singleton :: forall k a. (P.ToData k, P.ToData a) => k -> a -> Map k a
+singleton :: forall k a. (P.ToData k, P.ToData a) => k -> a -> AssocList k a
 singleton (P.toBuiltinData -> k) (P.toBuiltinData -> a) = unsafeFromBuiltinList xs
   where
     xs = BI.mkCons (BI.mkPairData k a) nil
 
 {-# INLINEABLE empty #-}
-empty :: forall k a. Map k a
+empty :: forall k a. AssocList k a
 empty = unsafeFromBuiltinList nil
 
 {-# INLINEABLE null #-}
-null :: forall k a. Map k a -> Bool
+null :: forall k a. AssocList k a -> Bool
 null = P.null . toBuiltinList
 
 {-# INLINEABLE unsafeFromList #-}
-unsafeFromList :: (P.ToData k, P.ToData a) => [(k, a)] -> Map k a
+unsafeFromList :: (P.ToData k, P.ToData a) => [(k, a)] -> AssocList k a
 unsafeFromList =
   unsafeFromBuiltinList
     . toBuiltin
@@ -170,8 +168,8 @@ unsafeFromList =
 uncons ::
   forall k a.
   (P.UnsafeFromData k, P.UnsafeFromData a) =>
-  Map k a ->
-  Maybe ((k, a), Map k a)
+  AssocList k a ->
+  Maybe ((k, a), AssocList k a)
 uncons m = case P.uncons (toBuiltinList m) of
   Nothing -> Nothing
   Just (pair, rest) ->
@@ -182,8 +180,8 @@ uncons m = case P.uncons (toBuiltinList m) of
 unsafeUncons ::
   forall k a.
   (P.UnsafeFromData k, P.UnsafeFromData a) =>
-  Map k a ->
-  ((k, a), Map k a)
+  AssocList k a ->
+  ((k, a), AssocList k a)
 unsafeUncons m =
   ((P.unsafeFromBuiltinData k, P.unsafeFromBuiltinData a), unsafeFromBuiltinList tl)
   where
@@ -191,7 +189,7 @@ unsafeUncons m =
     (k, a) = P.pairToPair hd
 
 {-# INLINEABLE noDuplicateKeys #-}
-noDuplicateKeys :: forall k a. Map k a -> Bool
+noDuplicateKeys :: forall k a. AssocList k a -> Bool
 noDuplicateKeys m = go (toBuiltinList m)
   where
     go :: BI.BuiltinList (BI.BuiltinPair BuiltinData BuiltinData) -> Bool
@@ -205,7 +203,7 @@ noDuplicateKeys m = go (toBuiltinList m)
         )
 
 {-# INLINEABLE all #-}
-all :: forall k a. (P.UnsafeFromData a) => (a -> Bool) -> Map k a -> Bool
+all :: forall k a. (P.UnsafeFromData a) => (a -> Bool) -> AssocList k a -> Bool
 all p m = go (toBuiltinList m)
   where
     go :: BI.BuiltinList (BI.BuiltinPair BuiltinData BuiltinData) -> Bool
@@ -219,7 +217,7 @@ all p m = go (toBuiltinList m)
         )
 
 {-# INLINEABLE any #-}
-any :: forall k a. (P.UnsafeFromData a) => (a -> Bool) -> Map k a -> Bool
+any :: forall k a. (P.UnsafeFromData a) => (a -> Bool) -> AssocList k a -> Bool
 any p m = go (toBuiltinList m)
   where
     go :: BI.BuiltinList (BI.BuiltinPair BuiltinData BuiltinData) -> Bool
@@ -234,13 +232,13 @@ any p m = go (toBuiltinList m)
 
 {-# INLINEABLE union #-}
 
--- | Combine two 'Map's.
+-- | Combine two 'AssocList's.
 union ::
   forall k a b.
   (P.UnsafeFromData a, P.UnsafeFromData b, P.ToData a, P.ToData b) =>
-  Map k a ->
-  Map k b ->
-  Map k (These a b)
+  AssocList k a ->
+  AssocList k b ->
+  AssocList k (These a b)
 union (toBuiltinList -> ls) (toBuiltinList -> rs) = unsafeFromBuiltinList res
   where
     ls' :: BI.BuiltinList (BI.BuiltinPair BuiltinData BuiltinData)
@@ -289,14 +287,14 @@ union (toBuiltinList -> ls) (toBuiltinList -> rs) = unsafeFromBuiltinList res
             acc
             (\hd -> go (BI.mkCons hd acc))
 
--- | Combine two 'Map's with the given combination function.
+-- | Combine two 'AssocList's with the given combination function.
 unionWith ::
   forall k a.
   (P.UnsafeFromData a, P.ToData a) =>
   (a -> a -> a) ->
-  Map k a ->
-  Map k a ->
-  Map k a
+  AssocList k a ->
+  AssocList k a ->
+  AssocList k a
 unionWith f (toBuiltinList -> ls) (toBuiltinList -> rs) =
   unsafeFromBuiltinList res
   where
@@ -347,7 +345,7 @@ unionWith f (toBuiltinList -> ls) (toBuiltinList -> rs) =
 {- | `toList` is expensive since it traverses the whole map.
 `toBuiltinList` is much faster.
 -}
-toList :: (P.UnsafeFromData k, P.UnsafeFromData a) => Map k a -> [(k, a)]
+toList :: (P.UnsafeFromData k, P.UnsafeFromData a) => AssocList k a -> [(k, a)]
 toList d = go (toBuiltinList d)
   where
     go xs =
@@ -360,15 +358,15 @@ toList d = go (toBuiltinList d)
         )
 
 {-# INLINEABLE toBuiltinList #-}
-toBuiltinList :: Map k a -> BI.BuiltinList (BI.BuiltinPair BuiltinData BuiltinData)
-toBuiltinList (Map d) = BI.unsafeDataAsMap d
+toBuiltinList :: AssocList k a -> BI.BuiltinList (BI.BuiltinPair BuiltinData BuiltinData)
+toBuiltinList (AssocList d) = BI.unsafeDataAsMap d
 
 {-# INLINEABLE unsafeFromBuiltinList #-}
 unsafeFromBuiltinList ::
   forall k a.
   BI.BuiltinList (BI.BuiltinPair BuiltinData BuiltinData) ->
-  Map k a
-unsafeFromBuiltinList = Map . BI.mkMap
+  AssocList k a
+unsafeFromBuiltinList = AssocList . BI.mkMap
 
 {-# INLINEABLE nil #-}
 nil :: BI.BuiltinList (BI.BuiltinPair BuiltinData BuiltinData)

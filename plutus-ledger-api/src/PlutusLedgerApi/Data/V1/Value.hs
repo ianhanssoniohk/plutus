@@ -7,13 +7,13 @@ module PlutusLedgerApi.Data.V1.Value where
 import PlutusLedgerApi.V1.Value hiding (Value (..))
 import PlutusTx qualified
 import PlutusTx.Builtins.Internal qualified as BI
-import PlutusTx.DataMap (Map)
-import PlutusTx.DataMap qualified as Map
+import PlutusTx.Data.AssocList (AssocList)
+import PlutusTx.Data.AssocList qualified as AssocList
 import PlutusTx.Prelude as PlutusTx
 
 import Prelude qualified as Haskell
 
-newtype Value = Value {getValue :: Map.Map CurrencySymbol (Map.Map TokenName Integer)}
+newtype Value = Value {getValue :: AssocList CurrencySymbol (AssocList TokenName Integer)}
   deriving stock (Haskell.Show)
   deriving newtype (PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
 
@@ -65,8 +65,8 @@ unordEqWith ::
   ) =>
   (a -> Bool) ->
   (a -> a -> Bool) ->
-  Map k a ->
-  Map k a ->
+  AssocList k a ->
+  AssocList k a ->
   Bool
 unordEqWith is0 eqV = goBoth
   where
@@ -75,13 +75,13 @@ unordEqWith is0 eqV = goBoth
       -- One spine is longer than the other one, but this still can result in a
       -- succeeding equality.
       -- check if the non-empty list only contains zero values.
-      | Map.null kvsL = Map.all is0 kvsR
+      | AssocList.null kvsL = AssocList.all is0 kvsR
       -- Symmetric to the previous case.
-      | Map.null kvsR = Map.all is0 kvsL
+      | AssocList.null kvsR = AssocList.all is0 kvsL
       -- Both spines are non-empty.
       | otherwise =
-          let ((kL, vL), kvsL') = Map.unsafeUncons kvsL
-              (kvR0@(kR0, vR0), kvsR0') = Map.unsafeUncons kvsR
+          let ((kL, vL), kvsL') = AssocList.unsafeUncons kvsL
+              (kvR0@(kR0, vR0), kvsR0') = AssocList.unsafeUncons kvsR
            in if
                 -- We could've avoided having this clause if we always searched for the
                 -- right key-value pair using @goRight@, however the sheer act of invoking
@@ -94,26 +94,26 @@ unordEqWith is0 eqV = goBoth
                 | kL == kR0 -> if vL `eqV` vR0 then goBoth kvsL' kvsR0' else False
                 | is0 vL -> goBoth kvsL' kvsR
                 | otherwise ->
-                    let reassemble :: [(k, a)] -> Map k a -> Map k a
+                    let reassemble :: [(k, a)] -> AssocList k a -> AssocList k a
                         reassemble [] m = m
                         reassemble ((k, a) : xs) m =
-                          let tl = Map.toBuiltinList m
+                          let tl = AssocList.toBuiltinList m
                               hd =
                                 BI.mkPairData
                                   (PlutusTx.toBuiltinData k)
                                   (PlutusTx.toBuiltinData a)
-                           in reassemble xs (Map.unsafeFromBuiltinList (BI.mkCons hd tl))
+                           in reassemble xs (AssocList.unsafeFromBuiltinList (BI.mkCons hd tl))
 
                         -- Recurse on the spine of the right list looking for a key-value
                         -- pair whose key matches @kL@, i.e. the first key in the remaining
                         -- part of the left list. The accumulator contains (in reverse order)
                         -- all elements of the right list processed so far whose keys are not
                         -- equal to @kL@ and values are non-zero.
-                        goRight :: [(k, a)] -> Map k a -> Bool
+                        goRight :: [(k, a)] -> AssocList k a -> Bool
                         goRight acc kvsR1'
-                          | Map.null kvsR1' = False
+                          | AssocList.null kvsR1' = False
                           | otherwise =
-                              let (kvR@(kR, vR), kvsR') = Map.unsafeUncons kvsR1'
+                              let (kvR@(kR, vR), kvsR') = AssocList.unsafeUncons kvsR1'
                                in if kL == kR
                                     then
                                       if vL `eqV` vR
@@ -131,4 +131,4 @@ currency have multiple entries.
 -}
 eq :: Value -> Value -> Bool
 eq (Value currs1) (Value currs2) =
-  unordEqWith (Map.all (0 ==)) (unordEqWith (0 ==) (==)) currs1 currs2
+  unordEqWith (AssocList.all (0 ==)) (unordEqWith (0 ==) (==)) currs1 currs2

@@ -81,7 +81,7 @@ import PlutusLedgerApi.V1.Value qualified as Val
 import PlutusLedgerApi.V2 qualified as Ledger (Address (Address))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
-import PlutusTx.DataMap qualified as Map
+import PlutusTx.Data.AssocList qualified as Data.AssocList
 import PlutusTx.Trace (traceError, traceIfFalse)
 import Prelude qualified as Haskell
 
@@ -270,11 +270,11 @@ mkMarloweValidator
            -- [Marlowe-Cardano Specification: "Constraint 18. Final balance."]
            traceIfFalse ("v"  <> tag) (totalBalance accounts == expected)
            -- [Marlowe-Cardano Specification: "Constraint 13. Positive balances".]
-        && traceIfFalse ("b"  <> tag) (Map.all (> 0) accounts)
+        && traceIfFalse ("b"  <> tag) (Data.AssocList.all (> 0) accounts)
            -- [Marlowe-Cardano Specification: "Constraint 19. No duplicates".]
-        && traceIfFalse ("ea" <> tag) (Map.noDuplicateKeys accounts)
-        && traceIfFalse ("ec" <> tag) (Map.noDuplicateKeys choices)
-        && traceIfFalse ("eb" <> tag) (Map.noDuplicateKeys boundValues)
+        && traceIfFalse ("ea" <> tag) (Data.AssocList.noDuplicateKeys accounts)
+        && traceIfFalse ("ec" <> tag) (Data.AssocList.noDuplicateKeys choices)
+        && traceIfFalse ("eb" <> tag) (Data.AssocList.noDuplicateKeys boundValues)
 
     -- Look up the Datum hash for specific data.
     findDatumHash' :: PlutusTx.ToData o => o -> Maybe DatumHash

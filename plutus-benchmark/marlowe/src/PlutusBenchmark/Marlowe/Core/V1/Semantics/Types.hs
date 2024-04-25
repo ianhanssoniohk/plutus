@@ -43,7 +43,7 @@ import GHC.Generics (Generic)
 import PlutusBenchmark.Marlowe.Core.V1.Semantics.Types.Address (Network)
 import PlutusLedgerApi.V2 (CurrencySymbol, POSIXTime (..), TokenName)
 import PlutusTx.AsData (asData)
-import PlutusTx.DataMap (Map)
+import PlutusTx.Data.AssocList (AssocList)
 import PlutusTx.IsData (FromData, ToData, UnsafeFromData, makeIsDataIndexed, unstableMakeIsData)
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude (Bool (..), BuiltinByteString, Eq (..), Integer, Ord ((<=), (>=)), any,
@@ -52,7 +52,7 @@ import PlutusTx.Prelude (Bool (..), BuiltinByteString, Eq (..), Integer, Ord ((<
 import PlutusLedgerApi.V1.Value qualified as Val
 import PlutusLedgerApi.V2 qualified as Ledger (Address (..), Credential (..), PubKeyHash (..),
                                                ScriptHash (..), StakingCredential (..))
-import PlutusTx.DataMap qualified as Map
+import PlutusTx.Data.AssocList qualified as AssocList
 import Prelude qualified as Haskell
 
 deriving stock instance Data POSIXTime
@@ -109,7 +109,7 @@ asData
   |]
 
 -- | The accounts in a contract.
-type Accounts = Map (AccountId, Token) Integer
+type Accounts = AssocList (AccountId, Token) Integer
 
 -- | Values, as defined using Let ar e identified by name,
 --   and can be used by 'UseValue' construct.
@@ -300,8 +300,8 @@ asData
   [d|
   -- | Marlowe contract internal state. Stored in a /Datum/ of a transaction output.
   data State = State { accounts    :: Accounts
-                    , choices     :: Map ChoiceId ChosenNum
-                    , boundValues :: Map ValueId Integer
+                    , choices     :: AssocList ChoiceId ChosenNum
+                    , boundValues :: AssocList ValueId Integer
                     , minTime     :: POSIXTime }
     deriving stock (Generic, Data)
     deriving newtype (ToData, FromData, UnsafeFromData, Haskell.Eq, Haskell.Ord, Haskell.Show, Eq)
@@ -359,9 +359,9 @@ data IntervalResult = IntervalTrimmed Environment State
 -- | Empty State for a given minimal 'POSIXTime'
 emptyState :: POSIXTime -> State
 emptyState sn = State
-    { accounts = Map.empty
-    , choices  = Map.empty
-    , boundValues = Map.empty
+    { accounts = AssocList.empty
+    , choices  = AssocList.empty
+    , boundValues = AssocList.empty
     , minTime = sn }
 {-# INLINABLE emptyState #-}
 

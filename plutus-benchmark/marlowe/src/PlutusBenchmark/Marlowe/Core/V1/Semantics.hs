@@ -114,7 +114,7 @@ import PlutusTx.Prelude (AdditiveGroup ((-)), AdditiveSemigroup ((+)), Bool (..)
 
 import PlutusLedgerApi.V2 qualified as Val
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.DataMap qualified as Map
+import PlutusTx.Data.AssocList qualified as AssocList
 import Prelude qualified as Haskell
 
 
@@ -279,7 +279,7 @@ evalValue env state value = let
             -- Marlowe's Isabelle semantics given the precondition that
             -- the initial state's `choices` in Isabelle was sorted and
             -- did not contain duplicate entries.
-            case Map.lookup choiceId (choices state) of
+            case AssocList.lookup choiceId (choices state) of
                 Just x  -> x
                 Nothing -> 0
         TimeIntervalStart    -> getPOSIXTime (fst (timeInterval env))
@@ -290,7 +290,7 @@ evalValue env state value = let
             -- Marlowe's Isabelle semantics given the precondition that
             -- the initial state's `boundValues` in Isabelle was sorted
             -- and did not contain duplicate entries.
-            case Map.lookup valId (boundValues state) of
+            case AssocList.lookup valId (boundValues state) of
                 Just x  -> x
                 Nothing -> 0
         Cond cond thn els    -> if evalObservation env state cond then eval thn else eval els
@@ -310,7 +310,7 @@ evalObservation env state obs = let
                                    -- to Marlowe's Isabelle semantics given the precondition that
                                    -- the initial state's `choices` in Isabelle was sorted and did
                                    -- not contain duplicate entries.
-        ChoseSomething choiceId -> choiceId `Map.member` choices state
+        ChoseSomething choiceId -> choiceId `AssocList.member` choices state
         ValueGE lhs rhs         -> evalVal lhs >= evalVal rhs
         ValueGT lhs rhs         -> evalVal lhs > evalVal rhs
         ValueLT lhs rhs         -> evalVal lhs < evalVal rhs
@@ -323,7 +323,7 @@ evalObservation env state obs = let
 -- | Pick the first account with money in it.
 refundOne :: Accounts -> Maybe ((Party, Token, Integer), Accounts)
 refundOne accounts =
-    if Map.null accounts
+    if AssocList.null accounts
         then Nothing
         else
             -- SCP-5126: The return value of this function differs from
@@ -332,7 +332,7 @@ refundOne accounts =
             -- lexicographically ordered one. Also, the sequence
             -- `Map.fromList . tail . Map.toList` preserves the
             -- invariants of order and non-duplication.
-            let (((accId, token), balance), rest) = Map.unsafeUncons accounts
+            let (((accId, token), balance), rest) = AssocList.unsafeUncons accounts
              in if balance > 0
                     then Just ((accId, token, balance), rest)
                     else refundOne rest
@@ -345,7 +345,7 @@ moneyInAccount accId token accounts =
     -- Marlowe's Isabelle semantics given the precondition that
     -- the initial state's `accounts` in Isabelle was sorted and
     -- did not contain duplicate entries.
-    case Map.lookup (accId, token) accounts of
+    case AssocList.lookup (accId, token) accounts of
       Just x  -> x
       Nothing -> 0
 
@@ -359,7 +359,7 @@ updateMoneyInAccount accId token amount =
     -- Isabelle semantics given the precondition that the initial
     -- state's `accounts` in Isabelle was sorted and did not
     -- contain duplicate entries.
-    if amount <= 0 then Map.delete (accId, token) else Map.insert (accId, token) amount
+    if amount <= 0 then AssocList.delete (accId, token) else AssocList.insert (accId, token) amount
 
 
 -- | Add the given amount of money to an account (only if it is positive).
@@ -439,13 +439,13 @@ reduceContractStep env state contract = case contract of
         -- (aside from internal ordering) to Marlowe's Isabelle semantics
         -- given the precondition that the initial state's `boundValues`
         -- in Isabelle was sorted and did not contain duplicate entries.
-        newState = state { boundValues = Map.insert valId evaluatedValue boundVals }
+        newState = state { boundValues = AssocList.insert valId evaluatedValue boundVals }
         -- SCP-5126: Given the precondition that `boundValues` contains
         -- no duplicate entries, this lookup behaves identically to
         -- Marlowe's Isabelle semantics given the precondition that the
         -- initial state's `boundValues` in Isabelle was sorted and did
         -- not contain duplicate entries.
-        warn = case Map.lookup valId boundVals of
+        warn = case AssocList.lookup valId boundVals of
               Just oldVal -> ReduceShadowing valId oldVal evaluatedValue
               Nothing     -> ReduceNoWarning
         in Reduced warn ReduceNoPayment newState cont
@@ -502,7 +502,7 @@ applyAction _ state (IChoice choId1 choice) (Choice choId2 bounds) =
     -- from internal ordering) to Marlowe's Isabelle semantics
     -- given the precondition that the initial state's `choices`
     -- in Isabelle was sorted and did not contain duplicate entries.
-    then let newState = state { choices = Map.insert choId1 choice (choices state) }
+    then let newState = state { choices = AssocList.insert choId1 choice (choices state) }
          in AppliedAction ApplyNoWarning newState
     else NotAppliedAction
 applyAction env state INotify (Notify obs)
@@ -624,7 +624,7 @@ computeTransaction tx state contract = let
     in case fixInterval (txInterval tx) state of
         IntervalTrimmed env fixState -> case applyAllInputs env fixState contract inputs of
             ApplyAllSuccess reduced warnings payments newState cont ->
-                   if not reduced && (notClose contract || (Map.null $ accounts state))
+                   if not reduced && (notClose contract || (AssocList.null $ accounts state))
                     then Error TEUselessTransaction
                     else TransactionOutput { txOutWarnings = warnings
                                            , txOutPayments = payments
@@ -684,12 +684,12 @@ contractLifespanUpperBound contract = case contract of
 totalBalance :: Accounts -> Money
 totalBalance accounts = foldMap
     (\((_, Token cur tok), balance) -> Val.singleton cur tok balance)
-    (Map.toList accounts)
+    (AssocList.toList accounts)
 
 
 -- | Check that all accounts have positive balance.
 allBalancesArePositive :: State -> Bool
-allBalancesArePositive State{..} = all (\(_, balance) -> balance > 0) (Map.toList accounts)
+allBalancesArePositive State{..} = all (\(_, balance) -> balance > 0) (AssocList.toList accounts)
 
 
 instance Eq Payment where
