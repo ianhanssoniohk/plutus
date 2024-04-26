@@ -21,7 +21,7 @@ import TH.Spec qualified as TH
 import Unicode.Spec qualified as Unicode
 
 main :: IO ()
-main = defaultMain $ runTestNestedIn ["test"] tests
+main = defaultMain $ testGroup "" [runTestNestedIn ["test"] tests, Map.propertyTests]
 
 tests :: TestNested
 tests =
@@ -34,7 +34,7 @@ tests =
       , IntegerLiterals.Strict.NoNegativeLiterals.Spec.tests
       , IsData.tests
       , Lift.tests
-      , Map.tests
+      , Map.goldenTests
       , TH.tests
       , Lib.tests
       , Budget.tests

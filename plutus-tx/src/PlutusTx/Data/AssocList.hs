@@ -14,6 +14,7 @@ module PlutusTx.Data.AssocList (
   null,
   toList,
   toBuiltinList,
+  safeFromList,
   unsafeFromList,
   unsafeFromBuiltinList,
   uncons,
@@ -156,6 +157,21 @@ empty = unsafeFromBuiltinList nil
 {-# INLINEABLE null #-}
 null :: forall k a. AssocList k a -> Bool
 null = P.null . toBuiltinList
+
+{-# INLINEABLE safeFromList #-}
+safeFromList :: forall k a . (Eq k, P.ToData k, P.ToData a) => [(k, a)] -> AssocList k a
+safeFromList =
+  unsafeFromBuiltinList
+    . toBuiltin
+    . PlutusTx.Prelude.map (\(k, a) -> (P.toBuiltinData k, P.toBuiltinData a))
+    . foldr (uncurry go) []
+  where
+    go :: k -> a -> [(k, a)] -> [(k, a)]
+    go k v [] = [(k,  v)]
+    go k v ((k', v') : rest) =
+      if k == k'
+        then (k, v) : rest
+        else (k', v') : go k v rest
 
 {-# INLINEABLE unsafeFromList #-}
 unsafeFromList :: (P.ToData k, P.ToData a) => [(k, a)] -> AssocList k a
