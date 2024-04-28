@@ -18,11 +18,13 @@ module Map.Spec where
 
 import Test.Tasty.Extras
 
+import Control.Monad (when)
 import Data.List (nubBy, sort)
 import Data.Map.Strict qualified as HMap
 import Data.Map.Strict qualified as Map
 import Debug.Trace (traceM)
 import Hedgehog (Gen, MonadTest, Property, Range, assert, forAll, property, (===))
+import Hedgehog.Gen (discard)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import PlutusTx.AssocMap qualified as AssocMap
@@ -61,6 +63,12 @@ propertyTests =
     , testProperty "member" memberSpec
     , testProperty "insert" insertSpec
     , testProperty "all" allSpec
+    , testProperty "any" anySpec
+    , testProperty "keys" keysSpec
+    , testProperty "uncons" unconsSpec
+    , testProperty "unsafeUncons" unsafeUnconsSpec
+    , testProperty "noDuplicateKeys" noDuplicateKeysSpec
+    , testProperty "delete" deleteSpec
     ]
 
 map1 ::
@@ -121,6 +129,9 @@ map2 =
 newtype AssocListS = AssocListS [(Integer, Integer)]
   deriving (Show, Eq)
 
+nullS :: AssocListS -> Bool
+nullS (AssocListS l) = null l
+
 semanticsToAssocMap :: AssocListS -> AssocMap.Map Integer Integer
 semanticsToAssocMap = AssocMap.unsafeFromList . toListS
 
@@ -155,12 +166,42 @@ insertS :: Integer -> Integer -> AssocListS -> AssocListS
 insertS k v (AssocListS l) =
   AssocListS . Map.toList . Map.insert k v . Map.fromList $ l
 
+deleteS :: Integer -> AssocListS -> AssocListS
+deleteS k (AssocListS l) =
+  AssocListS . Map.toList . Map.delete k . Map.fromList $ l
+
 allS :: (Integer -> Bool) -> AssocListS -> Bool
 allS p (AssocListS l) = all (p . snd) l
+
+anyS :: (Integer -> Bool) -> AssocListS -> Bool
+anyS p (AssocListS l) = any (p . snd) l
+
+keysS :: AssocListS -> [Integer]
+keysS (AssocListS l) = map fst l
+
+unconsS :: AssocListS -> Maybe ((Integer, Integer), AssocListS)
+unconsS (AssocListS [])       = Nothing
+unconsS (AssocListS (x : xs)) = Just (x, AssocListS xs)
+
+unsafeUnconsS :: AssocListS -> ((Integer, Integer), AssocListS)
+unsafeUnconsS (AssocListS [])       = error "unsafeUnconsS: empty list"
+unsafeUnconsS (AssocListS (x : xs)) = (x, AssocListS xs)
+
+noDuplicateKeysS :: AssocListS -> Bool
+noDuplicateKeysS (AssocListS l) =
+  length l == length (nubBy (\(k1, _) (k2, _) -> k1 == k2) l)
 
 genAssocListS :: Gen AssocListS
 genAssocListS =
   AssocListS . Map.toList <$> Gen.map rangeLength genPair
+  where
+    genPair :: Gen (Integer, Integer)
+    genPair = do
+      (,) <$> Gen.integral rangeElem <*> Gen.integral rangeElem
+
+genUnsafeAssocListS :: Gen AssocListS
+genUnsafeAssocListS = do
+  AssocListS <$> Gen.list rangeLength genPair
   where
     genPair :: Gen (Integer, Integer)
     genPair = do
@@ -227,6 +268,15 @@ insertSpec = property $ do
   insertS key value assocListS ~~ AssocMap.insert key value assocMap
   insertS key value assocListS ~~ Data.AssocList.insert key value assocList
 
+deleteSpec :: Property
+deleteSpec = property $ do
+  assocListS <- forAll genAssocListS
+  key <- forAll $ Gen.integral rangeElem
+  let assocMap = semanticsToAssocMap assocListS
+      assocList = semanticsToAssocList assocListS
+  deleteS key assocListS ~~ AssocMap.delete key assocMap
+  deleteS key assocListS ~~ Data.AssocList.delete key assocList
+
 allSpec :: Property
 allSpec = property $ do
   assocListS <- forAll genAssocListS
@@ -236,3 +286,41 @@ allSpec = property $ do
       predicate x = x < num
   allS predicate assocListS === AssocMap.all predicate assocMap
   allS predicate assocListS === Data.AssocList.all predicate assocList
+
+anySpec :: Property
+anySpec = property $ do
+  assocListS <- forAll genAssocListS
+  num <- forAll $ Gen.integral rangeElem
+  let assocList = semanticsToAssocList assocListS
+      predicate x = x < num
+  anyS predicate assocListS === Data.AssocList.any predicate assocList
+
+keysSpec :: Property
+keysSpec = property $ do
+  assocListS <- forAll genAssocListS
+  let assocMap = semanticsToAssocMap assocListS
+  keysS assocListS === AssocMap.keys assocMap
+
+unconsSpec :: Property
+unconsSpec = property $ do
+  assocListS <- forAll genAssocListS
+  let assocList = semanticsToAssocList assocListS
+  unconsS assocListS `equiv` Data.AssocList.uncons assocList
+  where
+    equiv res1 res2 =
+      res1 === (fmap . fmap) assocListToSemantics res2
+
+unsafeUnconsSpec :: Property
+unsafeUnconsSpec = property $ do
+  assocListS <- forAll $ Gen.filter (not . nullS) genAssocListS
+  let assocList = semanticsToAssocList assocListS
+  unsafeUnconsS assocListS `equiv` Data.AssocList.unsafeUncons assocList
+  where
+    equiv res1 res2 =
+      res1 === fmap assocListToSemantics res2
+
+noDuplicateKeysSpec :: Property
+noDuplicateKeysSpec = property $ do
+  assocListS <- forAll genAssocListS
+  let assocList = semanticsToAssocList assocListS
+  noDuplicateKeysS assocListS === Data.AssocList.noDuplicateKeys assocList
