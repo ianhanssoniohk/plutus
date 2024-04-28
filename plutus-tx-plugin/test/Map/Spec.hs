@@ -32,11 +32,14 @@ import PlutusTx.Builtins qualified as PlutusTx
 import PlutusTx.Code
 import PlutusTx.Data.AssocList (AssocList)
 import PlutusTx.Data.AssocList qualified as Data.AssocList
+import PlutusTx.IsData ()
+import PlutusTx.IsData qualified as P
 import PlutusTx.Lift (liftCodeDef)
 import PlutusTx.Prelude qualified as PlutusTx
 import PlutusTx.Show qualified as PlutusTx
 import PlutusTx.Test
 import PlutusTx.TH (compile)
+import PlutusTx.These (These (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
@@ -69,6 +72,7 @@ propertyTests =
     , testProperty "unsafeUncons" unsafeUnconsSpec
     , testProperty "noDuplicateKeys" noDuplicateKeysSpec
     , testProperty "delete" deleteSpec
+    , testProperty "union" unionSpec
     ]
 
 map1 ::
@@ -126,72 +130,73 @@ map2 =
         ||]
     )
 
-newtype AssocListS = AssocListS [(Integer, Integer)]
+newtype AssocListS k v = AssocListS [(k, v)]
   deriving (Show, Eq)
 
-nullS :: AssocListS -> Bool
+nullS :: AssocListS k v -> Bool
 nullS (AssocListS l) = null l
 
-semanticsToAssocMap :: AssocListS -> AssocMap.Map Integer Integer
+semanticsToAssocMap :: AssocListS k v -> AssocMap.Map k v
 semanticsToAssocMap = AssocMap.unsafeFromList . toListS
 
-semanticsToAssocList :: AssocListS -> AssocList Integer Integer
+semanticsToAssocList :: (P.ToData k, P.ToData v) => AssocListS k v -> AssocList k v
 semanticsToAssocList = Data.AssocList.unsafeFromList . toListS
 
-assocMapToSemantics :: AssocMap.Map Integer Integer -> AssocListS
+assocMapToSemantics :: AssocMap.Map k v -> AssocListS k v
 assocMapToSemantics = unsafeFromListS . AssocMap.toList
 
-assocListToSemantics :: AssocList Integer Integer -> AssocListS
+assocListToSemantics
+  :: (P.UnsafeFromData k, P.UnsafeFromData v) => AssocList k v -> AssocListS k v
 assocListToSemantics = unsafeFromListS . Data.AssocList.toList
 
-sortS :: AssocListS -> AssocListS
+sortS :: (Ord k, Ord v) => AssocListS k v -> AssocListS k v
 sortS (AssocListS l) = AssocListS $ sort l
 
-toListS :: AssocListS -> [(Integer, Integer)]
+toListS :: AssocListS k v -> [(k, v)]
 toListS (AssocListS l) = l
 
-unsafeFromListS :: [(Integer, Integer)] -> AssocListS
+unsafeFromListS :: [(k, v)] -> AssocListS k v
 unsafeFromListS = AssocListS
 
-safeFromListS :: [(Integer, Integer)] -> AssocListS
+safeFromListS :: Ord k => [(k, v)] -> AssocListS k v
 safeFromListS = AssocListS . Map.toList . Map.fromList
 
-lookupS :: Integer -> AssocListS -> Maybe Integer
+lookupS :: Integer -> AssocListS Integer Integer -> Maybe Integer
 lookupS k (AssocListS l) = Map.lookup k . Map.fromList $ l
 
-memberS :: Integer -> AssocListS -> Bool
+memberS :: Integer -> AssocListS Integer Integer -> Bool
 memberS k (AssocListS l) = Map.member k . Map.fromList $ l
 
-insertS :: Integer -> Integer -> AssocListS -> AssocListS
+insertS :: Integer -> Integer -> AssocListS Integer Integer -> AssocListS Integer Integer
 insertS k v (AssocListS l) =
   AssocListS . Map.toList . Map.insert k v . Map.fromList $ l
 
-deleteS :: Integer -> AssocListS -> AssocListS
+deleteS :: Integer -> AssocListS Integer Integer -> AssocListS Integer Integer
 deleteS k (AssocListS l) =
   AssocListS . Map.toList . Map.delete k . Map.fromList $ l
 
-allS :: (Integer -> Bool) -> AssocListS -> Bool
+allS :: (Integer -> Bool) -> AssocListS Integer Integer -> Bool
 allS p (AssocListS l) = all (p . snd) l
 
-anyS :: (Integer -> Bool) -> AssocListS -> Bool
+anyS :: (Integer -> Bool) -> AssocListS Integer Integer -> Bool
 anyS p (AssocListS l) = any (p . snd) l
 
-keysS :: AssocListS -> [Integer]
+keysS :: AssocListS Integer Integer -> [Integer]
 keysS (AssocListS l) = map fst l
 
-unconsS :: AssocListS -> Maybe ((Integer, Integer), AssocListS)
+unconsS :: AssocListS Integer Integer -> Maybe ((Integer, Integer), AssocListS Integer Integer)
 unconsS (AssocListS [])       = Nothing
 unconsS (AssocListS (x : xs)) = Just (x, AssocListS xs)
 
-unsafeUnconsS :: AssocListS -> ((Integer, Integer), AssocListS)
+unsafeUnconsS :: AssocListS Integer Integer -> ((Integer, Integer), AssocListS Integer Integer)
 unsafeUnconsS (AssocListS [])       = error "unsafeUnconsS: empty list"
 unsafeUnconsS (AssocListS (x : xs)) = (x, AssocListS xs)
 
-noDuplicateKeysS :: AssocListS -> Bool
+noDuplicateKeysS :: AssocListS Integer Integer -> Bool
 noDuplicateKeysS (AssocListS l) =
   length l == length (nubBy (\(k1, _) (k2, _) -> k1 == k2) l)
 
-genAssocListS :: Gen AssocListS
+genAssocListS :: Gen (AssocListS Integer Integer)
 genAssocListS =
   AssocListS . Map.toList <$> Gen.map rangeLength genPair
   where
@@ -199,7 +204,7 @@ genAssocListS =
     genPair = do
       (,) <$> Gen.integral rangeElem <*> Gen.integral rangeElem
 
-genUnsafeAssocListS :: Gen AssocListS
+genUnsafeAssocListS :: Gen (AssocListS Integer Integer)
 genUnsafeAssocListS = do
   AssocListS <$> Gen.list rangeLength genPair
   where
@@ -207,14 +212,41 @@ genUnsafeAssocListS = do
     genPair = do
       (,) <$> Gen.integral rangeElem <*> Gen.integral rangeElem
 
-class Equivalence a where
-  (~~) :: MonadTest m => AssocListS -> a -> m ()
+unionS
+  :: AssocListS Integer Integer
+  -> AssocListS Integer Integer
+  -> AssocListS Integer (These Integer Integer)
+unionS (AssocListS ls) (AssocListS rs) =
+  let
+    f a b' = case b' of
+      Nothing -> This a
+      Just b  -> These a b
 
-instance Equivalence (AssocMap.Map Integer Integer) where
+    ls' = fmap (\(c, i) -> (c, f i (lookupS c (AssocListS rs)))) ls
+
+    -- Keeps only those keys which don't appear in the left map.
+    rs' = filter (\(c, _) -> not (any (\(c', _) -> c' == c) ls)) rs
+
+    rs'' = fmap (fmap That) rs'
+   in
+    AssocListS (ls' ++ rs'')
+
+class Equivalence l where
+  (~~) ::
+    ( MonadTest m
+    , Show k
+    , Show v
+    , Ord k
+    , Ord v
+    , P.UnsafeFromData k
+    , P.UnsafeFromData v
+    ) => AssocListS k v -> l k v -> m ()
+
+instance Equivalence AssocMap.Map where
   assocListS ~~ assocMap =
     sortS assocListS === sortS (assocMapToSemantics assocMap)
 
-instance Equivalence (AssocList Integer Integer) where
+instance Equivalence AssocList where
   assocListS ~~ assocList =
     sortS assocListS === sortS (assocListToSemantics assocList)
 
@@ -324,3 +356,15 @@ noDuplicateKeysSpec = property $ do
   assocListS <- forAll genAssocListS
   let assocList = semanticsToAssocList assocListS
   noDuplicateKeysS assocListS === Data.AssocList.noDuplicateKeys assocList
+
+unionSpec :: Property
+unionSpec = property $ do
+  assocListS1 <- forAll genAssocListS
+  assocListS2 <- forAll genAssocListS
+  let assocMap1 = semanticsToAssocMap assocListS1
+      assocMap2 = semanticsToAssocMap assocListS2
+      assocList1 = semanticsToAssocList assocListS1
+      assocList2 = semanticsToAssocList assocListS1
+  unionS assocListS1 assocListS2 ~~ AssocMap.union assocMap1 assocMap2
+  unionS assocListS1 assocListS2 ~~ Data.AssocList.union assocList1 assocList2
+

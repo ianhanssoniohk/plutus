@@ -248,6 +248,12 @@ any p m = go (toBuiltinList m)
 
 {-# INLINEABLE union #-}
 
+-- TODO: This is broken!
+-- The value should be a correct encoding of a `These` value, but it is not.
+-- Example:
+--  > union (safeFromList []) (safeFromList [(0, 0)]) :: AssocList Integer (These Integer Integer)
+--  > AssocList Map [(I 0,I 0)]
+-- The second element of the pair should be encoded as the appropriate `Constr`!
 -- | Combine two 'AssocList's.
 union ::
   forall k a b.
