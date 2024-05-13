@@ -1,17 +1,6 @@
 import { themes as prismThemes } from "prism-react-renderer";
 import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
-import fs from "fs";
-const thing = fs.readFileSync("code/BasicPlutusTx.hs", "utf8");
-
-function getFileContentsFromDir(dir: string) {
-  const files = fs.readdirSync(dir);
-  const fileContents: Record<string, string> = {};
-  for (const file of files) {
-    fileContents[file] = fs.readFileSync(`${dir}/${file}`, "utf8");
-  }
-  return fileContents;
-}
 
 const config: Config = {
   title: "Plutus Documentation",
@@ -32,6 +21,15 @@ const config: Config = {
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
 
+  plugins: [
+    [
+      require.resolve("@cmfcmf/docusaurus-search-local"),
+      {
+        indexDocs: true,
+      },
+    ],
+  ],
+
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".
@@ -39,6 +37,10 @@ const config: Config = {
     defaultLocale: "en",
     locales: ["en"],
   },
+  markdown: {
+    mermaid: true,
+  },
+  themes: ["@docusaurus/theme-mermaid"],
 
   presets: [
     [
@@ -80,7 +82,6 @@ const config: Config = {
         },
       ],
     },
-    fileContents: getFileContentsFromDir(`${process.cwd()}/code`),
     footer: {
       style: "dark",
       links: [
