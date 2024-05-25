@@ -11,14 +11,13 @@ const config: Config = {
   url: "https://plutus.readthedocs.io",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: "/",
+  baseUrl: "/plutus/docusaurus/",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
 
   projectName: "ianhanssoniohk.github.io",
   organizationName: "ianhanssoniohk",
-  deploymentBranch: "gh-pages",
   trailingSlash: false,
 
   onBrokenLinks: "throw",
