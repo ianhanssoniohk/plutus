@@ -24,11 +24,12 @@ jobs:
           mkdir dist
           cp -RL ./result/share/doc/* ./dist/
       - name: Build documentation
-        working-directory: docusaurus
         run: |
+          cd docusaurus
           yarn
           yarn build
-          mv build ./dist
+          cd ..
+          mv build /dist/docs
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
