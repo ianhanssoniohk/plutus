@@ -28,8 +28,8 @@ jobs:
         run: |
           yarn
           yarn build
-
-          mv build ./dist/docs
+          mkdir -p /dist/docs
+          mv build /dist/docs
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
