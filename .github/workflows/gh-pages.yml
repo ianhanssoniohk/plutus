@@ -23,7 +23,13 @@ jobs:
           nix build .#combined-haddock
           mkdir dist
           cp -RL ./result/share/doc/* ./dist/
-          cp ./LICENSE ./dist/
+      - name: Build documentation
+        working-directory: docusaurus
+        run: |
+          yarn
+          yarn build
+
+          mv build /tmp/public/docusaurus
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
