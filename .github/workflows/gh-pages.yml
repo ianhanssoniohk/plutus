@@ -24,17 +24,16 @@ jobs:
           mkdir dist
           cp -RL ./result/share/doc/* ./dist/
       - name: Build docusaurus site
+        working-directory: docusaurus
         run: |
-          cd docusaurus
           yarn
           yarn build
-          cd ..
-          mkdir dist/dcsrs
-          cp -RL docusaurus/build ./dist/dcsrs/
+      - name: Copy docusaurus site to dist
+        run: cp -RL build/* ./dist/docs/
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
-          target-folder: check2
+          target-folder: check4
           # We publish our haddock, which is non-trivially big.
           # So keeping the whole history is expensive, and anyway we don't need it.
           single-commit: true
