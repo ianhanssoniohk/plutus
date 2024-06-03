@@ -1,9 +1,9 @@
-name: "Build and Deploy to Github Pages"
+name: "Build Docusaurs"
 on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - docusaurus
 jobs:
   build-haddock-site:
     runs-on: ubuntu-latest
@@ -13,20 +13,15 @@ jobs:
       name: github-pages
     steps:
       - uses: actions/checkout@v4
-      - uses: nixbuild/nix-quick-install-action@v27
-        with:
-          nix_conf: |
-            experimental-features = nix-command flakes
-            accept-flake-config = true
-      - name: Build haddock site
+      - name: Build documentation
+        working-directory: docusaurus
         run: |
-          nix build .#combined-haddock
-          mkdir dist
-          cp -RL ./result/share/doc/* ./dist/
+          yarn
+          yarn build
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist
-          target-folder: ${{ github.ref_name }}
+          folder: docusaurs/build
+          target-folder: docs
           # We publish our haddock, which is non-trivially big.
           # So keeping the whole history is expensive, and anyway we don't need it.
           single-commit: true
