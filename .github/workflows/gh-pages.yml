@@ -29,7 +29,7 @@ jobs:
           yarn
           yarn build
 
-          mv build /tmp/public/docusaurus
+          mv build ./dist/docs
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
