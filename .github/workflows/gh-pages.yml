@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - docusaurus
 jobs:
   build-haddock-site:
     runs-on: ubuntu-latest
@@ -26,7 +26,7 @@ jobs:
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
-          target-folder: ${{ github.ref_name }}
+          target-folder: check
           # We publish our haddock, which is non-trivially big.
           # So keeping the whole history is expensive, and anyway we don't need it.
           single-commit: true
