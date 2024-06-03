@@ -18,17 +18,17 @@ jobs:
           nix_conf: |
             experimental-features = nix-command flakes
             accept-flake-config = true
-      - name: Build haddock site
-        run: |
-          nix build .#combined-haddock
-          mkdir dist
-          cp -RL ./result/share/doc/* ./dist/
       - name: Build documentation
         working-directory: docusaurus
         run: |
           yarn
           yarn build
-          mv build /dist
+          mkdir -p /dist/docs
+          mv build /dist/docs
+      - name: Build haddock site
+        run: |
+          nix build .#combined-haddock
+          cp -RL ./result/share/doc/* ./dist/
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
