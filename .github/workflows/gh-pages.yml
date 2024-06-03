@@ -23,10 +23,16 @@ jobs:
           nix build .#combined-haddock
           mkdir dist
           cp -RL ./result/share/doc/* ./dist/
+      - name: Build docusaurus site
+        working-directory: docusaurus
+        run: |
+          yarn
+          yarn build
+          cp -RL build ./dist/dcsrs
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
-          target-folder: check
+          target-folder: check2
           # We publish our haddock, which is non-trivially big.
           # So keeping the whole history is expensive, and anyway we don't need it.
           single-commit: true
