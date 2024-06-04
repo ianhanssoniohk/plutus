@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Layout from "@theme/Layout";
 
 const Home = () => {
-  return <Layout>Landing</Layout>;
+  useEffect(() => {
+    window.location.href += "docs";
+  });
+  return <Layout></Layout>;
 };
 
 export default Home;

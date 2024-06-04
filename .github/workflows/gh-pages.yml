@@ -26,7 +26,7 @@ jobs:
       - name: Build docusaurus site
         working-directory: docusaurus
         run: |
-          sed -i 's|baseUrl: "/docs/"|baseUrl: "/plutus/${{ github.ref_name }}/docs/"|' docusaurus.config.js
+          sed -i 's|baseUrl: "/docs/"|baseUrl: "/plutus/${{ github.ref_name }}/docs/"|' docusaurus.config.ts
           yarn
           yarn build
       - name: Copy docusaurus site to dist
