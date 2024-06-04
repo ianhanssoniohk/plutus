@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdocusaurus=self.webpackChunkdocusaurus||[]).push([[4583],{3797:(s,u,a)=>{a.r(u),a.d(u,{default:()=>d});a(6540);var c=a(3268),e=a(4848);const d=()=>(0,e.jsx)(c.A,{children:"Landing"})}}]);
